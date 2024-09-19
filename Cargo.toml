@@ -1,0 +1,20 @@
+[package]
+name = "mini-nu-shell"
+version = "0.1.0"
+authors = ["Jan9103"]
+edition = "2021"
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[dependencies]
+nu-cli = "0.98.0"
+nu-command = "0.98.0"
+nu-protocol = "0.98.0"
+nu-cmd-lang = "0.98.0"
+nu-engine = "0.98.0"
+nu-parser = "0.98.0"
