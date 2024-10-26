@@ -12,9 +12,9 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-nu-cli = "0.98.0"
-nu-command = "0.98.0"
-nu-protocol = "0.98.0"
-nu-cmd-lang = "0.98.0"
-nu-engine = "0.98.0"
-nu-parser = "0.98.0"
+nu-cli = "0.99.1"
+nu-command = "0.99.1"
+nu-protocol = "0.99.1"
+nu-cmd-lang = "0.99.1"
+nu-engine = "0.99.1"
+nu-parser = "0.99.1"
