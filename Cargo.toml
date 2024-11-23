@@ -4,6 +4,13 @@ version = "0.1.0"
 authors = ["Jan9103"]
 edition = "2021"
 
+[profile.dev]
+stip = false
+opt-level = 0
+lto = false
+codegen-units = 16
+panic = "unwind"
+
 [profile.release]
 strip = true
 opt-level = "z"
@@ -12,9 +19,9 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-nu-cli = "0.99.1"
-nu-command = "0.99.1"
-nu-protocol = "0.99.1"
-nu-cmd-lang = "0.99.1"
-nu-engine = "0.99.1"
-nu-parser = "0.99.1"
+nu-cli      = "0.100.0"
+nu-command  = "0.100.0"
+nu-protocol = "0.100.0"
+nu-cmd-lang = "0.100.0"
+nu-engine   = "0.100.0"
+nu-parser   = "0.100.0"
