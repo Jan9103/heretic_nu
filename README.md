@@ -18,6 +18,14 @@ issues you encounter are NOT nushell's fault.
 
 So its a straight downgrade from nushell? yes, unless storage space is extremely sparse: nu0.98 is 38M and mini-nu-shell is 14M on my system.
 
+## Compiling
+
+It should usually just be `cargo build --release`.
+
+Troubleshooting:
+* Something with `uu` can't be compiled
+  * `rm Cargo.lock`, and retry
+
 ## Usage
 
 * **Run a script:** `mini-nu-shell my_file.nu`
