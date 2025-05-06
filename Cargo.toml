@@ -18,10 +18,14 @@ lto = true
 codegen-units = 1
 panic = "abort"
 
+[features]
+default = []
+embed-app = []
+
 [dependencies]
-nu-cli      = "0.101.0"
-nu-command  = "0.101.0"
-nu-protocol = "0.101.0"
-nu-cmd-lang = "0.101.0"
-nu-engine   = "0.101.0"
-nu-parser   = "0.101.0"
+nu-cli      = "0.103.0"
+nu-command  = "0.103.0"
+nu-protocol = "0.103.0"
+nu-cmd-lang = "0.103.0"
+nu-engine   = "0.103.0"
+nu-parser   = "0.103.0"
