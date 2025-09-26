@@ -7,18 +7,17 @@ This is just a kitbash of [mini-nu][] and [tinysh][] with some extra glue, etc.
 This was a funny experiment for which i sometimes find a use again.
 * It is **NOT ACTIVELY MAINTAINED**.
 * It is probably very buggy.
-* The goal is not to be a usable interactive shell.
 
 ## Features
 
-* Execute nu commands
-  * Some are missing
-  * Some, such as `use`, might be buggy
-* Save variables, etc between commands
-* Extremely basic text-input
+* Mostly nu compatible
+  * Yes it is the same engine, but well
+* Text input (replaceable at runtime via config)
+  * History
+  * Arrow keys
+  * Syntax highlight
   * No multi-line
-  * No arrow-keys
-  * Etc
+  * No tab-completion
 
 ## Compiling
 

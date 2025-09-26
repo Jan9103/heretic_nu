@@ -5,7 +5,7 @@ authors = ["Jan9103"]
 edition = "2021"
 
 [profile.dev]
-stip = false
+strip = false
 opt-level = 0
 lto = false
 codegen-units = 16
