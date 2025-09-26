@@ -31,7 +31,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
             &mut engine_state,
             &mut stack,
-            None,
+            Some(PipelineData::ByteStream(
+                nu_protocol::ByteStream::stdin(Span::unknown())
+                    .expect("something, something, stdin is broken"),
+                None,
+            )),
             true,
         )?;
         Ok(())
@@ -40,20 +44,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "embed-app"))]
     {
         let mut args = std::env::args();
-        match args.nth(1) {
-            Some(arg1) => {
-                let mut script = String::new();
-                if arg1 == "-c" {
-                    script = args.next().expect("Missing command-argument after '-c'");
-                } else {
-                    std::fs::File::open(arg1)
-                        .expect("File not found.")
-                        .read_to_string(&mut script)?;
-                }
-                exec_nu(&script, &mut engine_state, &mut stack, None, true)?;
-                return Ok(());
+        if let Some(arg1) = args.nth(1) {
+            let mut script = String::new();
+            if arg1 == "-c" {
+                script = args.next().expect("Missing command-argument after '-c'");
+            } else {
+                std::fs::File::open(arg1)
+                    .expect("File not found.")
+                    .read_to_string(&mut script)?;
             }
-            None => {}
+            exec_nu(
+                &script,
+                &mut engine_state,
+                &mut stack,
+                Some(PipelineData::ByteStream(
+                    nu_protocol::ByteStream::stdin(Span::unknown())
+                        .expect("something, something, stdin is broken"),
+                    None,
+                )),
+                true,
+            )?;
+            return Ok(());
         }
 
         loop {
@@ -102,12 +113,12 @@ fn exec_nu(
     pipeline_data: Option<PipelineData>,
     do_print: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut working_set = StateWorkingSet::new(&engine_state);
+    let mut working_set = StateWorkingSet::new(engine_state);
     let block = nu_parser::parse(&mut working_set, None, line.as_bytes(), false);
     engine_state.merge_delta(working_set.render())?;
 
     match eval_block_with_early_return::<WithoutDebug>(
-        &engine_state,
+        engine_state,
         stack,
         &block,
         pipeline_data.unwrap_or(PipelineData::Empty),
@@ -117,24 +128,9 @@ fn exec_nu(
                 match pipeline_data.into_value(Span::test_data()) {
                     // Ok(value) => println!("{}", render_value(&value)),
                     Ok(value) => {
-                        dbg!(&value);
+                        // dbg!(&value);
                         match value {
-                            // Value::String { val, .. } => println!("{}", val),
-                            Value::Nothing { .. } => println!(""),
-                            // Value::Record { .. } | Value::List { .. } => exec_nu(
-                            //     "$in | table",
-                            //     engine_state,
-                            //     stack,
-                            //     Some(PipelineData::Value(value, None)),
-                            //     true,
-                            // )?,
-                            // _ => exec_nu(
-                            //     "$in | to nuon",
-                            //     engine_state,
-                            //     stack,
-                            //     Some(PipelineData::Value(value, None)),
-                            //     true,
-                            // )?,
+                            Value::Nothing { .. } => println!(),
                             _ => exec_nu(
                                 "print $in",
                                 engine_state,
@@ -165,7 +161,7 @@ fn exec_nu(
 
 fn add_missing_commands(engine_state: &mut EngineState) -> Result<(), Box<dyn std::error::Error>> {
     let delta = {
-        let mut working_set = StateWorkingSet::new(&engine_state);
+        let mut working_set = StateWorkingSet::new(engine_state);
         working_set.add_decl(Box::new(nu_cli::Print));
         working_set.render()
     };

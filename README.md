@@ -1,22 +1,24 @@
 # mini-nu-shell
 
-This is minimal working subset of a [nu][nushell]-interpreter ([mini-nu][]) wrapped by a minimal shell-prompt (taken from [tinysh][]).  
-This is just a kitbash of [mini-nu][] and [tinysh][]. All credit goes to those 2 projects (and [nushell][], etc obviously)
+This is just a kitbash of [mini-nu][] and [tinysh][] with some extra glue, etc.
 
-Please keep in mind, that this is hacked together version and many
-issues you encounter are NOT nushell's fault.
+## PROJECT STATUS
+
+This was a funny experiment for which i sometimes find a use again.
+* It is **NOT ACTIVELY MAINTAINED**.
+* It is probably very buggy.
+* The goal is not to be a usable interactive shell.
 
 ## Features
 
 * Execute nu commands
-  * Some, such as `print`, are missing
-  * Some, such as `use`, might work differently
+  * Some are missing
+  * Some, such as `use`, might be buggy
 * Save variables, etc between commands
 * Extremely basic text-input
-  * No multiline
+  * No multi-line
   * No arrow-keys
-
-So its a straight downgrade from nushell? yes, unless storage space is extremely sparse: nu0.98 is 38M and mini-nu-shell is 14M on my system.
+  * Etc
 
 ## Compiling
 
@@ -34,14 +36,25 @@ Troubleshooting:
 * **Open a interactive shell:** `mini-nu-shell`
   * **Exit:** `crtl+d`-keybind or `exit` command
 
-### How to make things readable:
+## Embedding apps
 
-* `| to nuon`
-* `| table`
+You can compile a nu script into a binary "app" with this project.
 
-why not auto-append this? because `def foo [] {}` can't be piped.
+### Known Problems
+
+* Mini nu is not 100% nu compatible (see above)
+* Arguments and stdin are.. something..
+* It is in general a bad idea (security issues due to frozen version, etc).
+
+### How to
+
+1. merge your script into a single file (automation: [merge_nu_scripts][])
+2. move the file to `src/script.nu`
+3. `cargo build --release --features embed-app`
+4. you have your binary at `target/release/mini-nu-shell`
 
 
 [mini-nu]: https://github.com/cablehead/mini-nu
 [tinysh]: https://github.com/zserge/tinysh
 [nushell]: https://nushell.sh
+[merge_nu_scripts]: https://github.com/Jan9103/merge_nu_scripts
