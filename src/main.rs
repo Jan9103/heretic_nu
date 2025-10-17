@@ -108,6 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn exec_nu(
     line: &str,
     engine_state: &mut EngineState,
@@ -129,12 +130,13 @@ fn exec_nu(
     }
     engine_state.merge_delta(working_set.render())?;
 
-    eval_block_with_early_return::<WithoutDebug>(
+    Ok(eval_block_with_early_return::<WithoutDebug>(
         engine_state,
         stack,
         &block,
         pipeline_data.unwrap_or(PipelineData::Empty),
-    )
+    )?
+    .body)
 }
 
 fn render(

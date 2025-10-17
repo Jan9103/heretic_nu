@@ -23,9 +23,9 @@ default = []
 embed-app = []
 
 [dependencies]
-nu-cli      = "0.106.0"
-nu-command  = "0.106.0"
-nu-protocol = "0.106.0"
-nu-cmd-lang = "0.106.0"
-nu-engine   = "0.106.0"
-nu-parser   = "0.106.0"
+nu-cli      = "0.108.0"
+nu-command  = "0.108.0"
+nu-protocol = "0.108.0"
+nu-cmd-lang = "0.108.0"
+nu-engine   = "0.108.0"
+nu-parser   = "0.108.0"
