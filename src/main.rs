@@ -118,31 +118,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .expect("Default config is invalid");
 
     loop {
-        match h::exec_nu("_mini_nu_prompt", &mut engine_state, &mut stack, None) {
+        match h::exec_nu("_heretic_nu_prompt", &mut engine_state, &mut stack, None) {
             Ok(PipelineData::Value(Value::String { val, .. }, _)) => {
                 print!("{}", val);
             }
             Ok(_) => {
-                eprintln!("Error: invalid _mini_nu_prompt return type (not a string)");
+                eprintln!("Error: invalid _heretic_nu_prompt return type (not a string)");
                 print!("> ");
             }
             Err(e) => {
-                eprintln!("Error in _mini_nu_prompt: {e}");
+                eprintln!("Error in _heretic_nu_prompt: {e}");
                 print!("> ");
             }
         }
-        let input: String = match h::exec_nu("_mini_nu_input", &mut engine_state, &mut stack, None)
-        {
-            Ok(PipelineData::Value(Value::String { val, .. }, _)) => val,
-            Ok(_) => {
-                eprintln!("Error: invalid _mini_nu_input return type (not a string)");
-                std::process::exit(1);
-            }
-            Err(e) => {
-                eprintln!("Error in _mini_nu_input: {e}");
-                std::process::exit(1);
-            }
-        };
+        let input: String =
+            match h::exec_nu("_heretic_nu_input", &mut engine_state, &mut stack, None) {
+                Ok(PipelineData::Value(Value::String { val, .. }, _)) => val,
+                Ok(_) => {
+                    eprintln!("Error: invalid _heretic_nu_input return type (not a string)");
+                    std::process::exit(1);
+                }
+                Err(e) => {
+                    eprintln!("Error in _heretic_nu_input: {e}");
+                    std::process::exit(1);
+                }
+            };
         let res = h::exec_nu(&input, &mut engine_state, &mut stack, None);
         h::render(&mut engine_state, &mut stack, res);
     }

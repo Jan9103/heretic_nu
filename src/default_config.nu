@@ -1,8 +1,8 @@
-def _mini_nu_prompt []: nothing -> string {
+def _heretic_nu_prompt []: nothing -> string {
   $"\n(pwd)\n> "
 }
 
-def --env _mini_nu_input []: nothing -> string {
+def --env _heretic_nu_input []: nothing -> string {
   print --no-newline "\e[s\e[0J"
   def render [text: string, cursor: int]: nothing -> nothing {
     let cmov: int = (($text | str length) - $cursor) + 1
@@ -10,7 +10,7 @@ def --env _mini_nu_input []: nothing -> string {
   }
 
   mut history_nidx: int = 0
-  mut history: list<string> = ($env._MINI_NU_HISTORY? | default [] | prepend '')
+  mut history: list<string> = ($env._HERETIC_NU_HISTORY? | default [] | prepend '')
   mut text: string = ""
   mut cursor: int = 0
 
@@ -64,7 +64,7 @@ def --env _mini_nu_input []: nothing -> string {
         }
         if $input.code == 'enter' {
           print ''
-          $env._MINI_NU_HISTORY = ($env._MINI_NU_HISTORY? | default [] | prepend $text)
+          $env._HERETIC_NU_HISTORY = ($env._HERETIC_NU_HISTORY? | default [] | prepend $text)
           return $text
         }
         if $input.code == 'up' {
