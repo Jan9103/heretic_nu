@@ -1,5 +1,5 @@
 def _mini_nu_prompt []: nothing -> string {
-  "\n\n> "
+  $"\n(pwd)\n> "
 }
 
 def --env _mini_nu_input []: nothing -> string {
@@ -27,8 +27,14 @@ def --env _mini_nu_input []: nothing -> string {
       if $input.key_type == 'other' {
         if $input.code == 'backspace' {
           if $cursor > 0 {
-            $text = $'(if $cursor != 1 {$text | str substring ..($cursor - 2)})($text | str substring $cursor..)'
-            $cursor = ($cursor - 1)
+            if $input.modifiers == ['keymodifiers(alt)'] {
+              let e = ($text | str substring ..($cursor - 1) | split row ' ' | drop 1 | str join ' ' | str length)
+              $text = $"(if $e == 0 {''} else { $text | str substring ..($e - 1) })($text | str substring ($cursor)..)"
+              $cursor = $e
+            } else {
+              $text = $'(if $cursor != 1 {$text | str substring ..($cursor - 2)})($text | str substring $cursor..)'
+              $cursor = ($cursor - 1)
+            }
           }
           continue
         }
@@ -37,11 +43,23 @@ def --env _mini_nu_input []: nothing -> string {
           continue
         }
         if $input.code == 'left' {
-          $cursor = ([($cursor - 1) 0] | math max)
+          if $input.modifiers == ['keymodifiers(alt)'] {
+            $cursor = ($text | str substring ..($cursor - 1) | split row ' ' | drop 1 | str join ' ' | str length)
+          } else {
+            $cursor = ([($cursor - 1) 0] | math max)
+          }
           continue
         }
         if $input.code == 'right' {
-          $cursor = ([($cursor + 1) ($text | str length)] | math min)
+          if $input.modifiers == ['keymodifiers(alt)'] {
+            $cursor = (
+              ($text | str length) - ($text | str substring ($cursor + 1).. | split row ' ' | skip 1 | str join ' ' | str length)
+              | if $in != ($text | str length) { $in - 1 } else { $in }
+            )
+            # $cursor = $tl - ($text | str reverse | str substring ..(($tl - $cursor) - 1) | split row ' ' | drop 1 | str join ' ' | str length)
+          } else {
+            $cursor = ([($cursor + 1) ($text | str length)] | math min)
+          }
           continue
         }
         if $input.code == 'enter' {
@@ -51,13 +69,12 @@ def --env _mini_nu_input []: nothing -> string {
         }
         if $input.code == 'up' {
           if (($history | length) - 1) <= $history_nidx {
-            print ">=\n\n\n\n"
             continue
           }
           $history = ($history | update $history_nidx $text)
           $history_nidx = ($history_nidx + 1)
           $text = ($history | get $history_nidx)
-          $cursor = ([($text | str length) ($cursor)] | math min)
+          $cursor = ($text | str length)
           continue
         }
         if $input.code == 'down' {
@@ -73,9 +90,14 @@ def --env _mini_nu_input []: nothing -> string {
           continue
         }
       }
-      if $input.code? == 'd' and $input.modifiers == ['keymodifiers(control)'] {
-        print ''
-        exit
+      if $input.modifiers? == ['keymodifiers(control)'] {
+        if $input.code? == 'd' {
+          print ''
+          exit
+        }
+        if $input.code? == 'c' {
+          return ''
+        }
       }
 
       # TODO
