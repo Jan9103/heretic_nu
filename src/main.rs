@@ -1,9 +1,5 @@
 use heretic_nu as h;
 
-use nu_cli::gather_parent_env_vars;
-use nu_cmd_lang::create_default_context;
-use nu_command::add_shell_command_context;
-use nu_protocol::engine::Stack;
 use nu_protocol::{PipelineData, Span, Value};
 use std::io::Read;
 use std::path::PathBuf;
@@ -25,9 +21,7 @@ Flags:
 ";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut engine_state = create_default_context();
-    engine_state = add_shell_command_context(engine_state);
-    h::add_missing_commands(&mut engine_state)?;
+    let mut nu_instance = h::NuInstance::new()?;
 
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     let mut command: Option<String> = None;
@@ -36,14 +30,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let arg: String = args.remove(0);
         match arg.as_str() {
             "-xx" => {
-                engine_state.debugger =
+                nu_instance.engine_state.debugger =
                     Arc::new(Mutex::new(Box::new(h::debug_x::HereticDebuggerX {
                         log_target: h::debug_x::HereticDebuggerLogTarget::StdErr,
                         very_verbose: true,
                     })));
             }
             "-x" => {
-                engine_state.debugger = Arc::new(Mutex::new(Box::new(
+                nu_instance.engine_state.debugger = Arc::new(Mutex::new(Box::new(
                     h::debug_x::HereticDebuggerX::default(),
                 )));
             }
@@ -69,16 +63,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let init_cwd = std::env::current_dir()?;
-    gather_parent_env_vars(&mut engine_state, init_cwd.as_ref());
-
-    let mut stack = Stack::new();
+    nu_command::tls::CRYPTO_PROVIDER.default();
 
     if let Some(script) = command {
-        let res = h::exec_nu(
+        let res = nu_instance.exec(
             &script,
-            &mut engine_state,
-            &mut stack,
             Some(PipelineData::ByteStream(
                 nu_protocol::ByteStream::stdin(Span::unknown())
                     .expect("something, something, stdin is broken"),
@@ -86,7 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )),
         );
         let was_ok = res.is_ok();
-        h::render(&mut engine_state, &mut stack, res);
+        nu_instance.render(res);
         exit(if was_ok { 0 } else { 1 });
     }
     if let Some(filepath) = exec_file {
@@ -94,10 +83,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::File::open(filepath)
             .expect("File not found.")
             .read_to_string(&mut script)?;
-        let res = h::exec_nu(
+        let res = nu_instance.exec(
             &script,
-            &mut engine_state,
-            &mut stack,
             Some(PipelineData::ByteStream(
                 nu_protocol::ByteStream::stdin(Span::unknown())
                     .expect("something, something, stdin is broken"),
@@ -105,20 +92,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )),
         );
         let was_ok = res.is_ok();
-        h::render(&mut engine_state, &mut stack, res);
+        nu_instance.render(res);
         exit(if was_ok { 0 } else { 1 });
     }
 
-    h::exec_nu(
-        include_str!("default_config.nu"),
-        &mut engine_state,
-        &mut stack,
-        None,
-    )
-    .expect("Default config is invalid");
+    nu_instance
+        .exec(include_str!("default_config.nu"), None)
+        .expect("Default config is invalid");
 
     loop {
-        match h::exec_nu("_heretic_nu_prompt", &mut engine_state, &mut stack, None) {
+        match nu_instance.exec("_heretic_nu_prompt", None) {
             Ok(PipelineData::Value(Value::String { val, .. }, _)) => {
                 print!("{}", val);
             }
@@ -131,19 +114,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 print!("> ");
             }
         }
-        let input: String =
-            match h::exec_nu("_heretic_nu_input", &mut engine_state, &mut stack, None) {
-                Ok(PipelineData::Value(Value::String { val, .. }, _)) => val,
-                Ok(_) => {
-                    eprintln!("Error: invalid _heretic_nu_input return type (not a string)");
-                    std::process::exit(1);
-                }
-                Err(e) => {
-                    eprintln!("Error in _heretic_nu_input: {e}");
-                    std::process::exit(1);
-                }
-            };
-        let res = h::exec_nu(&input, &mut engine_state, &mut stack, None);
-        h::render(&mut engine_state, &mut stack, res);
+        let input: String = match nu_instance.exec("_heretic_nu_input", None) {
+            Ok(PipelineData::Value(Value::String { val, .. }, _)) => val,
+            Ok(_) => {
+                eprintln!("Error: invalid _heretic_nu_input return type (not a string)");
+                std::process::exit(1);
+            }
+            Err(e) => {
+                eprintln!("Error in _heretic_nu_input: {e}");
+                std::process::exit(1);
+            }
+        };
+        let res = nu_instance.exec(&input, None);
+        nu_instance.render(res);
     }
 }

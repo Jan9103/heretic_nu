@@ -4,6 +4,8 @@ use nu_protocol::debugger::Debugger;
 
 type LogIdType = u64;
 
+const CODE_PREVIEW_LENGTH: usize = 20;
+
 fn log_file(id: LogIdType) -> PathBuf {
     std::env::home_dir()
         .expect("No home dir")
@@ -61,7 +63,8 @@ impl HereticDebuggerX {
         message: &str,
     ) {
         if let Some(span) = block.span {
-            let code = String::from_utf8_lossy(engine_state.get_span_contents(span))[..10]
+            let code = String::from_utf8_lossy(engine_state.get_span_contents(span))
+                [..CODE_PREVIEW_LENGTH]
                 .replace("\n", " ");
             self.log(&format!(
                 "{message}: span={}..{}, code={code}…",
@@ -78,8 +81,9 @@ impl HereticDebuggerX {
         message: &str,
     ) {
         let span = pipeline_element.expr.span;
-        let code =
-            String::from_utf8_lossy(engine_state.get_span_contents(span))[..10].replace("\n", " ");
+        let code = String::from_utf8_lossy(engine_state.get_span_contents(span))
+            [..CODE_PREVIEW_LENGTH]
+            .replace("\n", " ");
         self.log(&format!(
             "{message}: span={}..{}, code={code}…",
             span.start, span.end

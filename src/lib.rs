@@ -2,108 +2,124 @@ pub mod commands;
 pub mod debug_x;
 
 use nu_engine::eval_block_with_early_return;
-use nu_protocol::ast::{Expr, Expression};
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{PipelineData, ShellError, Span, Value};
 use std::sync::Arc;
 
-#[allow(clippy::result_large_err)]
-pub fn exec_nu(
-    line: &str,
-    engine_state: &mut EngineState,
-    stack: &mut Stack,
-    pipeline_data: Option<PipelineData>,
-) -> Result<PipelineData, ShellError> {
-    let mut working_set = StateWorkingSet::new(engine_state);
-    let mut block = nu_parser::parse(&mut working_set, None, line.as_bytes(), false);
-    // block.pipelines.iter().map(|pip| {
-    //     pip.elements.iter().map(|pipe| match pipe.expr {
-    //         Expr::ExternalCall(expr, earg) => {
-    //         }
-    //         _ => todo!(),
-    //     })
-    // });
-    if block.ir_block.is_none() {
-        let block_mut = Arc::make_mut(&mut block);
-        match nu_engine::compile(&working_set, block_mut) {
-            Ok(ir_block) => {
-                block_mut.ir_block = Some(ir_block);
-            }
-            Err(err) => {
-                working_set.compile_errors.push(err);
-            }
-        };
-    }
-    engine_state.merge_delta(working_set.render())?;
-
-    Ok(
-        eval_block_with_early_return::<nu_protocol::debugger::WithDebug>(
-            engine_state,
-            stack,
-            &block,
-            pipeline_data.unwrap_or(PipelineData::Empty),
-        )?
-        .body,
-    )
+pub struct NuInstance {
+    pub engine_state: EngineState,
+    pub stack: Stack,
 }
 
-pub fn render(
-    engine_state: &mut EngineState,
-    stack: &mut Stack,
-    result: Result<PipelineData, ShellError>,
-) {
-    match result {
-        Ok(pipeline_data) => match pipeline_data.into_value(Span::unknown()) {
-            Ok(value) => {
-                // dbg!(&value);
-                match value {
+impl NuInstance {
+    #[allow(clippy::result_large_err)]
+    pub fn new() -> Result<Self, ShellError> {
+        let mut engine_state = nu_cmd_lang::create_default_context();
+        engine_state = nu_command::add_shell_command_context(engine_state);
+        let init_cwd = std::env::current_dir().expect("Failed to get CWD");
+        nu_cli::gather_parent_env_vars(&mut engine_state, init_cwd.as_ref());
+
+        let mut res = Self {
+            engine_state,
+            stack: Stack::new(),
+        };
+
+        res.append_commands(vec![
+            // things not in the standard scope for some reason
+            Box::new(nu_cli::Print),
+            Box::new(nu_cli::NuHighlight),
+            // custom commands
+            Box::new(commands::evil::Evil),
+        ])?;
+
+        Ok(res)
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub fn append_commands(
+        &mut self,
+        commands: Vec<Box<dyn nu_protocol::engine::Command>>,
+    ) -> Result<(), ShellError> {
+        self.engine_state.merge_delta({
+            let mut working_set = StateWorkingSet::new(&self.engine_state);
+            for command in commands.into_iter() {
+                working_set.add_decl(command);
+            }
+            working_set.render()
+        })?;
+        Ok(())
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub fn compile(
+        &mut self,
+        code: &str,
+    ) -> Result<std::sync::Arc<nu_protocol::ast::Block>, ShellError> {
+        let mut working_set = StateWorkingSet::new(&self.engine_state);
+        let mut block: std::sync::Arc<nu_protocol::ast::Block> =
+            nu_parser::parse(&mut working_set, None, code.as_bytes(), false);
+        if block.ir_block.is_none() {
+            let block_mut = Arc::make_mut(&mut block);
+            match nu_engine::compile(&working_set, block_mut) {
+                Ok(ir_block) => {
+                    block_mut.ir_block = Some(ir_block);
+                }
+                Err(err) => {
+                    working_set.compile_errors.push(err);
+                }
+            };
+        }
+        self.engine_state.merge_delta(working_set.render())?;
+        Ok(block)
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub fn exec(
+        &mut self,
+        line: &str,
+        pipeline_data: Option<PipelineData>,
+    ) -> Result<PipelineData, ShellError> {
+        let block = self.compile(line)?;
+
+        Ok(
+            eval_block_with_early_return::<nu_protocol::debugger::WithDebug>(
+                &self.engine_state,
+                &mut self.stack,
+                &block,
+                pipeline_data.unwrap_or(PipelineData::Empty),
+            )?
+            .body,
+        )
+    }
+
+    pub fn render(&mut self, result: Result<PipelineData, ShellError>) {
+        match result {
+            Ok(pipeline_data) => match pipeline_data.into_value(Span::unknown()) {
+                Ok(value) => match value {
                     Value::Nothing { .. } => println!(),
-                    _ => {
-                        match exec_nu(
-                            "print",
-                            engine_state,
-                            stack,
-                            Some(PipelineData::Value(value, None)),
-                        ) {
-                            Ok(_) => (),
-                            Err(e) => {
-                                eprintln!("RENDER FAILED:");
-                                render(engine_state, stack, Err(e));
-                            }
+                    _ => match self.exec("print", Some(PipelineData::Value(value, None))) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            eprintln!("RENDER FAILED:");
+                            self.render(Err(e));
+                        }
+                    },
+                },
+                Err(e) => eprintln!("Conversion-Error (into_value): {:?}", e),
+            },
+            Err(render_error) => {
+                eprintln!("Nu-Error: {:?}", render_error);
+                #[allow(clippy::single_match)]
+                match render_error {
+                    ShellError::VariableNotFoundAtRuntime { span } => {
+                        let span_contents = self.engine_state.get_span_contents(span);
+                        if let Ok(a) = std::str::from_utf8(span_contents) {
+                            eprintln!("Span contents: {a}");
                         }
                     }
+                    _ => (),
                 }
-            }
-            Err(e) => eprintln!("Conversion-Error (into_value): {:?}", e),
-        },
-        Err(render_error) => {
-            eprintln!("Nu-Error: {:?}", render_error);
-            #[allow(clippy::single_match)]
-            match render_error {
-                ShellError::VariableNotFoundAtRuntime { span } => {
-                    let span_contents = engine_state.get_span_contents(span);
-                    if let Ok(a) = std::str::from_utf8(span_contents) {
-                        eprintln!("Span contents: {a}");
-                    }
-                }
-                _ => (),
             }
         }
     }
-}
-
-pub fn add_missing_commands(
-    engine_state: &mut EngineState,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let delta = {
-        let mut working_set = StateWorkingSet::new(engine_state);
-        working_set.add_decl(Box::new(nu_cli::Print));
-        working_set.add_decl(Box::new(nu_cli::NuHighlight));
-
-        working_set.add_decl(Box::new(commands::evil::Evil));
-
-        working_set.render()
-    };
-    engine_state.merge_delta(delta)?;
-    Ok(())
 }

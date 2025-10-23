@@ -1,4 +1,3 @@
-// pub mod cryo;
+pub mod attr_test;
 pub mod evil;
-// pub mod persist;
-// pub mod tab_complete;
+// pub mod log;
