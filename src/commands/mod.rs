@@ -1,3 +1,2 @@
-pub mod attr_test;
+pub mod debug;
 pub mod evil;
-// pub mod log;

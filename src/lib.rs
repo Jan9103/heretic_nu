@@ -1,5 +1,7 @@
+pub mod ansi;
 pub mod commands;
 pub mod debug_x;
+pub mod step_debug;
 
 use nu_engine::eval_block_with_early_return;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
@@ -30,6 +32,7 @@ impl NuInstance {
             Box::new(nu_cli::NuHighlight),
             // custom commands
             Box::new(commands::evil::Evil),
+            Box::new(commands::debug::HereticDebug),
         ])?;
 
         Ok(res)
@@ -65,7 +68,48 @@ impl NuInstance {
                     block_mut.ir_block = Some(ir_block);
                 }
                 Err(err) => {
+                    let msg = format!("Compiling IR failed: {err:?}");
+                    let span: Option<Span> = match err {
+                        nu_protocol::CompileError::DataOverflow { block_span } |
+                        nu_protocol::CompileError::FileOverflow { block_span } |
+                        nu_protocol::CompileError::IncoherentLoopState { block_span } |
+                        nu_protocol::CompileError::RegisterOverflow { block_span } => block_span,
+
+                        nu_protocol::CompileError::RegisterUninitialized { .. } => None,
+
+                        nu_protocol::CompileError::SetBranchTargetOfNonBranchInstruction { span, .. } |
+                        nu_protocol::CompileError::RunExternalNotFound { span } |
+                        nu_protocol::CompileError::AssignmentRequiresVar { span } |
+                        nu_protocol::CompileError::AssignmentRequiresMutableVar { span } |
+                        nu_protocol::CompileError::AutomaticEnvVarSetManually { span, .. } |
+                        nu_protocol::CompileError::CannotReplaceEnv { span } |
+                        nu_protocol::CompileError::UnexpectedExpression { span, .. } |
+                        nu_protocol::CompileError::MissingRequiredDeclaration { span, .. } |
+                        nu_protocol::CompileError::InvalidLiteral { span, .. } |
+                        nu_protocol::CompileError::Garbage { span } |
+                        nu_protocol::CompileError::UnsupportedOperatorExpression { span } |
+                        nu_protocol::CompileError::AccessEnvByInt { span } |
+                        nu_protocol::CompileError::InvalidKeywordCall { span, .. } |
+                        nu_protocol::CompileError::InvalidRedirectMode { span } |
+                        nu_protocol::CompileError::RegisterUninitializedWhilePushingInstruction { span, .. } => Some(span),
+
+                        nu_protocol::CompileError::NotInATry { span, .. } |
+                        nu_protocol::CompileError::NotInALoop { span, .. } |
+                        nu_protocol::CompileError::UndefinedLabel { span, .. } => span,
+                    };
                     working_set.compile_errors.push(err);
+                    return Err(if let Some(span) = span {
+                        let txt = String::from_utf8_lossy(working_set.get_span_contents(span));
+                        println!("{txt}");
+
+                        ShellError::NushellFailedSpanned {
+                            msg,
+                            label: format!("here: {txt}"),
+                            span,
+                        }
+                    } else {
+                        ShellError::NushellFailed { msg }
+                    });
                 }
             };
         }

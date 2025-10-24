@@ -1,6 +1,6 @@
 use heretic_nu as h;
 
-use nu_protocol::{PipelineData, Span, Value};
+use nu_protocol::{PipelineData, ShellError, Span, Value};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::exit;
@@ -51,6 +51,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "--help" | "-h" => {
                 println!("{HELP_TEXT}");
                 exit(0);
+            }
+            "--step-debug-ui" => {
+                if args.is_empty() {
+                    println!("'--step-debug-ui' is missing argument");
+                    exit(1);
+                }
+                nu_instance.engine_state.add_env_var(
+                    "socket_dir".into(),
+                    Value::string(args.remove(0), Span::unknown()),
+                );
+                command = Some(include_str!("step_debug_server.nu").into());
             }
             _ if arg.starts_with('-') => {
                 println!("Usage error: unknown argument: {arg}\n\nHelp text:\n\n{HELP_TEXT}");
