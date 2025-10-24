@@ -20,11 +20,15 @@ Nu, but with zip-ties instead of batteries included.
   * debug mode: `step` (WIP, inspect the engine state during individual IR steps in a separate window)
   * debug mode: `off`
   * launch-arguments: `-x`, `-xx`
-  * command: `heretic_debug` (switch modes mid-execution)
+  * command: `heretic debug` (switch modes mid-execution)
 * different config system:
   1. config file: `~/.config/heretic_nu/config.nu`
   1. each `.nu` file in a directory specified by `$env.heretic_nu_autoload_dirs` (yes you can edit it in your main `config.nu`)
 * `evil` command (evaluate strings as code)
+* builtin extended [commtest](https://github.com/jan9103/commtest):
+  * `#[test]` to mark a function as a test
+  * `#[test_param] flag-name = ['list' 'of' 'values' 'in' 'nuon' 'format']` (concept "inspired" by [pytest](https://docs.pytest.org/en/7.1.x/example/parametrize.htmlhttps://docs.pytest.org/en/7.1.x/example/parametrize.html))
+  * `heretic tests run` to run all tests in scope
 * Probably lots of bugs and missing things (no plugins, etc)
 
 ## Credits

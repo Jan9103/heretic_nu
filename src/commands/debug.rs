@@ -13,7 +13,7 @@ pub struct HereticDebug;
 
 impl Command for HereticDebug {
     fn name(&self) -> &str {
-        "heretic_debug"
+        "heretic debug"
     }
 
     fn signature(&self) -> Signature {

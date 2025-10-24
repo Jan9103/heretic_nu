@@ -14,6 +14,22 @@ pub struct NuInstance {
 }
 
 impl NuInstance {
+    pub fn add_var(
+        &mut self,
+        value: nu_protocol::Value,
+    ) -> nu_protocol::Id<nu_protocol::marker::Var> {
+        let current_max_id = self
+            .stack
+            .vars
+            .iter()
+            .map(|i| i.0.get())
+            .max()
+            .unwrap_or(100);
+        let vid = nu_protocol::Id::new(current_max_id + 1);
+        self.stack.add_var(vid, value);
+        vid
+    }
+
     #[allow(clippy::result_large_err)]
     pub fn new() -> Result<Self, ShellError> {
         let mut engine_state = nu_cmd_lang::create_default_context();
@@ -33,6 +49,7 @@ impl NuInstance {
             // custom commands
             Box::new(commands::evil::Evil),
             Box::new(commands::debug::HereticDebug),
+            Box::new(commands::run_tests::HereticTestsRun),
         ])?;
 
         Ok(res)

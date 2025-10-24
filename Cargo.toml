@@ -28,6 +28,7 @@ nu-protocol = "0.108.0"
 nu-cmd-lang = "0.108.0"
 nu-engine   = "0.108.0"
 nu-parser   = "0.108.0"
+nuon        = "0.108.0"
 
 pico-args = "0.5.0"
 
