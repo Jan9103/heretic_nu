@@ -111,6 +111,67 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .exec(include_str!("default_config.nu"), None)
         .expect("Default config is invalid");
 
+    if let Some(home_dir) = std::env::home_dir() {
+        let config_file = home_dir
+            .join(".config")
+            .join("heretic_nu")
+            .join("config.nu");
+        if config_file.is_file() {
+            let mut script = String::new();
+            std::fs::File::open(config_file)
+                .expect("File not found.")
+                .read_to_string(&mut script)?;
+            nu_instance.exec(&script, None)?;
+        }
+        let ev = nu_instance
+            .engine_state
+            .get_env_var("heretic_nu_autoload_dirs")
+            .cloned();
+        match ev {
+            Some(Value::List { vals, .. }) => {
+                for val in vals {
+                    match val {
+                        Value::String { val, .. } => {
+                            let fp = PathBuf::from(val);
+                            if fp.is_dir() {
+                                for f in std::fs::read_dir(fp)
+                                    .expect("Failed to read autoload-dir contents")
+                                {
+                                    let f: std::fs::DirEntry =
+                                        f.expect("Failed to read autoload-dir contents");
+                                    let p = f.path();
+                                    if p.is_file()
+                                        && p.extension() == Some(std::ffi::OsStr::new("nu"))
+                                    {
+                                        let mut script = String::new();
+                                        std::fs::File::open(p)
+                                            .expect("File not found.")
+                                            .read_to_string(&mut script)?;
+                                        nu_instance.exec(&script, None)?;
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(Box::new(ShellError::TypeMismatch {
+                                err_message: "$env.heretic_nu_autoload_dirs has to be a list<path>"
+                                    .into(),
+                                span: Span::unknown(),
+                            }));
+                        }
+                    }
+                }
+            }
+            Some(_) => {
+                return Err(Box::new(ShellError::TypeMismatch {
+                    err_message: "$env.heretic_nu_autoload_dirs has to be a list<path>".into(),
+                    span: Span::unknown(),
+                }));
+            }
+            None => {}
+        }
+    }
+
     loop {
         match nu_instance.exec("_heretic_nu_prompt", None) {
             Ok(PipelineData::Value(Value::String { val, .. }, _)) => {
