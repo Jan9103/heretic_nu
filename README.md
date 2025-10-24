@@ -1,10 +1,12 @@
 # heretic nu 2
 
-Nu, but with zip-ties included instead of batteries included.
+Nu, but with zip-ties instead of batteries included.
 
 ## PROJECT STATUS
 
-Experiment
+* Experiment
+* Usable (as debugger for nu)
+* Not actively maintained
 
 ## Comparison to normal nu
 
@@ -12,7 +14,16 @@ Experiment
   * You control literally everything about key-input (just overwrite the `_heretic_nu_input` function)
   * The prompt can do anything and does not get overdrawn
   * The example input does not contain a tab-completion
-* Added `-x` mode (launch it with `-x` or `-xx` to see what is happening under the hood)
+* Debugging stuff:
+  * debug mode: `x` (get a rough idea where in the code it is)
+  * debug mode: `xx` (see which IR step it is currently running)
+  * debug mode: `step` (WIP, inspect the engine state during individual IR steps in a separate window)
+  * debug mode: `off`
+  * launch-arguments: `-x`, `-xx`
+  * command: `heretic_debug` (switch modes mid-execution)
+* different config system:
+  1. config file: `~/.config/heretic_nu/config.nu`
+  1. each `.nu` file in a directory specified by `$env.heretic_nu_autoload_dirs` (yes you can edit it in your main `config.nu`)
 * `evil` command (evaluate strings as code)
 * Probably lots of bugs and missing things (no plugins, etc)
 
