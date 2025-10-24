@@ -25,6 +25,7 @@ Nu, but with zip-ties instead of batteries included.
   1. config file: `~/.config/heretic_nu/config.nu`
   1. each `.nu` file in a directory specified by `$env.heretic_nu_autoload_dirs` (yes you can edit it in your main `config.nu`)
 * `evil` command (evaluate strings as code)
+  * `heretic const evil`: evaluate strings as code at const-time..
 * builtin extended [commtest](https://github.com/jan9103/commtest):
   * `#[test]` to mark a function as a test
   * `#[test_param] flag-name = ['list' 'of' 'values' 'in' 'nuon' 'format']` (concept "inspired" by [pytest](https://docs.pytest.org/en/7.1.x/example/parametrize.htmlhttps://docs.pytest.org/en/7.1.x/example/parametrize.html))

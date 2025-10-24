@@ -48,6 +48,7 @@ impl NuInstance {
             Box::new(nu_cli::NuHighlight),
             // custom commands
             Box::new(commands::evil::Evil),
+            Box::new(commands::evil::ConstEvil),
             Box::new(commands::debug::HereticDebug),
             Box::new(commands::run_tests::HereticTestsRun),
         ])?;
