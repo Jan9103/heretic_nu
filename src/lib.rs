@@ -51,6 +51,8 @@ impl NuInstance {
             Box::new(commands::evil::ConstEvil),
             Box::new(commands::debug::HereticDebug),
             Box::new(commands::run_tests::HereticTestsRun),
+            // overrides
+            Box::new(commands::version::HereticVersion),
         ])?;
 
         Ok(res)

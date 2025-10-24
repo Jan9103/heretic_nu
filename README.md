@@ -30,6 +30,7 @@ Nu, but with zip-ties instead of batteries included.
   * `#[test]` to mark a function as a test
   * `#[test_param] flag-name = ['list' 'of' 'values' 'in' 'nuon' 'format']` (concept "inspired" by [pytest](https://docs.pytest.org/en/7.1.x/example/parametrize.htmlhttps://docs.pytest.org/en/7.1.x/example/parametrize.html))
   * `heretic tests run` to run all tests in scope
+* `version` now includes `is_heretic_nu: true`
 * Probably lots of bugs and missing things (no plugins, etc)
 
 ## Credits
