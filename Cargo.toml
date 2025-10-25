@@ -19,16 +19,27 @@ panic = "unwind"
 # panic = "abort"
 
 [features]
-default = []
+default = ['nu_std', 'nu_cmd_extra', 'nu_explore', 'heretic_step_debug', 'heretic_const_evil', 'heretic_test']
+
+heretic_step_debug = ['dep:nuon']
+heretic_const_evil = ['dep:nuon']
+heretic_test = []
+
+nu_std = ['dep:nu-std']
+nu_cmd_extra = ['dep:nu-cmd-extra']
+nu_explore = ['dep:nu-explore']
 
 [dependencies]
-nu-cli      = "0.108.0"
-nu-command  = "0.108.0"
-nu-protocol = "0.108.0"
-nu-cmd-lang = "0.108.0"
-nu-engine   = "0.108.0"
-nu-parser   = "0.108.0"
-nuon        = "0.108.0"
+nu-cli        = {version = "0.108.0", optional = false}
+nu-command    = {version = "0.108.0", optional = false}
+nu-protocol   = {version = "0.108.0", optional = false}
+nu-cmd-lang   = {version = "0.108.0", optional = false}
+nu-engine     = {version = "0.108.0", optional = false}
+nu-parser     = {version = "0.108.0", optional = false}
+nuon          = {version = "0.108.0", optional = true}
+nu-cmd-extra  = {version = "0.108.0", optional = true}
+nu-explore    = {version = "0.108.0", optional = true}
+nu-std        = {version = "0.108.0", optional = true}
 
 pico-args = "0.5.0"
 

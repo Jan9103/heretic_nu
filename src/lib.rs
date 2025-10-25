@@ -1,6 +1,7 @@
 pub mod ansi;
 pub mod commands;
 pub mod debug_x;
+#[cfg(feature = "heretic_step_debug")]
 pub mod step_debug;
 
 use nu_engine::eval_block_with_early_return;
@@ -30,10 +31,27 @@ impl NuInstance {
         vid
     }
 
+    #[cfg(feature = "nu_std")]
+    #[allow(clippy::result_large_err)]
+    pub fn add_stdlib(&mut self) -> Result<(), ShellError> {
+        match nu_std::load_standard_library(&mut self.engine_state) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(ShellError::NushellFailed {
+                msg: format!("Failed to load nu-std: {e}"),
+            }),
+        }
+    }
+
     #[allow(clippy::result_large_err)]
     pub fn new() -> Result<Self, ShellError> {
         let mut engine_state = nu_cmd_lang::create_default_context();
         engine_state = nu_command::add_shell_command_context(engine_state);
+        if cfg!(feature = "nu_cmd_extra") {
+            engine_state = nu_cmd_extra::add_extra_command_context(engine_state);
+        }
+        if cfg!(feature = "nu_explore") {
+            engine_state = nu_explore::add_explore_context(engine_state);
+        }
         let init_cwd = std::env::current_dir().expect("Failed to get CWD");
         nu_cli::gather_parent_env_vars(&mut engine_state, init_cwd.as_ref());
 
@@ -48,8 +66,10 @@ impl NuInstance {
             Box::new(nu_cli::NuHighlight),
             // custom commands
             Box::new(commands::evil::Evil),
+            #[cfg(feature = "heretic_const_evil")]
             Box::new(commands::evil::ConstEvil),
             Box::new(commands::debug::HereticDebug),
+            #[cfg(feature = "heretic_test")]
             Box::new(commands::run_tests::HereticTestsRun),
             // overrides
             Box::new(commands::version::HereticVersion),

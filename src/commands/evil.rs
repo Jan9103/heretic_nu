@@ -68,9 +68,11 @@ impl Command for Evil {
     }
 }
 
+#[cfg(feature = "heretic_const_evil")]
 #[derive(Clone)]
 pub struct ConstEvil;
 
+#[cfg(feature = "heretic_const_evil")]
 impl ConstEvil {
     #[allow(clippy::result_large_err)]
     fn run_const_evil(call: &Call, code: String) -> Result<PipelineData, ShellError> {
@@ -125,6 +127,7 @@ impl ConstEvil {
     }
 }
 
+#[cfg(feature = "heretic_const_evil")]
 impl Command for ConstEvil {
     fn name(&self) -> &str {
         "heretic const evil"

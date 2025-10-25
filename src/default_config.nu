@@ -1,5 +1,9 @@
 def _heretic_nu_prompt []: nothing -> string {
-  $"\n(pwd)\n> "
+  if "PROMPT_COMMAND" in $env {
+    do $env.PROMPT_COMMAND
+  } else {
+    $"\n(pwd)\n> "
+  }
 }
 
 def --env _heretic_nu_input []: nothing -> string {

@@ -21,11 +21,15 @@ Flags:
 ";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    nu_command::tls::CRYPTO_PROVIDER.default();
+
     let mut nu_instance = h::NuInstance::new()?;
 
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     let mut command: Option<String> = None;
     let mut exec_file: Option<PathBuf> = None;
+    #[cfg(feature = "nu_std")]
+    let mut use_nu_std: bool = true;
     while !args.is_empty() {
         let arg: String = args.remove(0);
         match arg.as_str() {
@@ -52,6 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{HELP_TEXT}");
                 exit(0);
             }
+            #[cfg(feature = "heretic_step_debug")]
             "--step-debug-ui" => {
                 if args.is_empty() {
                     println!("'--step-debug-ui' is missing argument");
@@ -62,6 +67,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Value::string(args.remove(0), Span::unknown()),
                 );
                 command = Some(include_str!("step_debug_server.nu").into());
+            }
+            #[cfg(feature = "nu_std")]
+            "--no-std-lib" => {
+                use_nu_std = false;
             }
             _ if arg.starts_with('-') => {
                 println!("Usage error: unknown argument: {arg}\n\nHelp text:\n\n{HELP_TEXT}");
@@ -74,7 +83,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    nu_command::tls::CRYPTO_PROVIDER.default();
+    #[cfg(feature = "nu_std")]
+    if use_nu_std {
+        nu_instance.add_stdlib()?;
+    }
 
     if let Some(script) = command {
         let res = nu_instance.exec(

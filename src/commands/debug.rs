@@ -3,10 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use nu_engine::command_prelude::*;
 use nu_protocol::PipelineData;
 
-use crate::{
-    debug_x::{HereticDebuggerLogTarget, HereticDebuggerX},
-    step_debug::HereticStepDebugger,
-};
+use crate::debug_x::{HereticDebuggerLogTarget, HereticDebuggerX};
 
 #[derive(Clone)]
 pub struct HereticDebug;
@@ -87,9 +84,19 @@ impl Command for HereticDebug {
                     .expect("Failed to enable x-debugger");
             }
             "step" => {
-                engine_state
-                    .activate_debugger(Box::new(HereticStepDebugger::default()))
-                    .expect("Failed to enable step-debugger");
+                if cfg!(feature = "heretic_step_debug") {
+                    engine_state
+                        .activate_debugger(Box::new(
+                            crate::step_debug::HereticStepDebugger::default(),
+                        ))
+                        .expect("Failed to enable step-debugger");
+                } else {
+                    return Err(ShellError::IncorrectValue {
+                        msg: "Heretic was compiled without 'heretic_step_debug' feature".into(),
+                        val_span: val_r.span,
+                        call_span: call.span(),
+                    });
+                }
             }
             "off" => {
                 engine_state
