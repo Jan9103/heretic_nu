@@ -7,6 +7,8 @@ pub mod step_debug;
 use nu_engine::eval_block_with_early_return;
 use nu_protocol::engine::{EngineState, Stack, StateWorkingSet};
 use nu_protocol::{PipelineData, ShellError, Span, Value};
+use std::io::Read;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 pub struct NuInstance {
@@ -55,10 +57,19 @@ impl NuInstance {
         let init_cwd = std::env::current_dir().expect("Failed to get CWD");
         nu_cli::gather_parent_env_vars(&mut engine_state, init_cwd.as_ref());
 
+        engine_state.generate_nu_constant();
+
+        engine_state.add_env_var(
+            "CMD_DURATION_MS".into(),
+            Value::string("0823", Span::unknown()), // compatibility for prompts
+        );
+
         let mut res = Self {
             engine_state,
             stack: Stack::new(),
         };
+
+        res.stack.set_last_exit_code(0, Span::unknown());
 
         res.append_commands(vec![
             // things not in the standard scope for some reason
@@ -165,14 +176,38 @@ impl NuInstance {
     ) -> Result<PipelineData, ShellError> {
         let block = self.compile(line)?;
 
-        Ok(
-            eval_block_with_early_return::<nu_protocol::debugger::WithDebug>(
-                &self.engine_state,
-                &mut self.stack,
-                &block,
-                pipeline_data.unwrap_or(PipelineData::Empty),
-            )?
-            .body,
+        match eval_block_with_early_return::<nu_protocol::debugger::WithDebug>(
+            &self.engine_state,
+            &mut self.stack,
+            &block,
+            pipeline_data.unwrap_or(PipelineData::Empty),
+        ) {
+            Ok(res) => {
+                match nu_protocol::process::check_exit_status_future(res.exit) {
+                    Ok(_) => (),
+                    Err(err) => {
+                        return Err(err);
+                    }
+                }
+                Ok(res.body)
+            }
+            Err(err) => Err(err),
+        }
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub fn run_file(
+        &mut self,
+        filepath: String,
+        args: &[String],
+        input: Option<PipelineData>,
+    ) -> Result<(), ShellError> {
+        nu_cli::evaluate_file(
+            filepath,
+            args,
+            &mut self.engine_state,
+            &mut self.stack,
+            input.unwrap_or(PipelineData::Empty),
         )
     }
 
@@ -205,5 +240,119 @@ impl NuInstance {
                 }
             }
         }
+    }
+
+    pub fn load_default_config(&mut self) {
+        self.exec(nu_utils::utils::ConfigFileKind::Env.default(), None)
+            .expect("failed to run upstream default_env.nu");
+        self.exec(nu_utils::utils::ConfigFileKind::Config.default(), None)
+            .expect("failed to run upstream default_config.nu");
+
+        self.exec(include_str!("default_config.nu"), None)
+            .expect("Default config is invalid");
+    }
+
+    //#[allow(clippy::result_large_err)]
+    //pub fn load_base_settings(&mut self) -> Result<(), ShellError> {
+    //    if let Some(home_dir) = std::env::home_dir() {
+    //        let settings_file = home_dir
+    //            .join(".config")
+    //            .join("heretic_nu")
+    //            .join("settings.nuon");
+    //        if settings_file.is_file() {
+    //            let mut unparsed_nuon = String::new();
+    //            std::fs::File::open(settings_file)
+    //                .expect("File not found.")
+    //                .read_to_string(&mut unparsed_nuon)
+    //                .expect("Failed to read config.nu file (filesystem IO)");
+    //            if let Value::Record {
+    //                val: main_record, ..
+    //            } = nuon::from_nuon(&unparsed_nuon, None)?
+    //            {
+    //                // main_record.get("lib_dirs")
+    //            } else {
+    //                return Err(ShellError::IncorrectValue {
+    //                    msg: "settings.nuon is not a record".into(),
+    //                    val_span: Span::unknown(),
+    //                    call_span: Span::unknown(),
+    //                });
+    //            }
+    //            // self.exec(&script, None)?;
+    //        };
+    //    }
+    //    Ok(())
+    //}
+
+    #[allow(clippy::result_large_err)]
+    pub fn load_all_configs(&mut self) -> Result<(), ShellError> {
+        self.load_default_config();
+
+        if let Some(home_dir) = std::env::home_dir() {
+            let config_file = home_dir
+                .join(".config")
+                .join("heretic_nu")
+                .join("config.nu");
+            if config_file.is_file() {
+                let mut script = String::new();
+                std::fs::File::open(config_file)
+                    .expect("File not found.")
+                    .read_to_string(&mut script)
+                    .expect("Failed to read config.nu file (filesystem IO)");
+                self.exec(&script, None)?;
+            }
+            let ev = self
+                .engine_state
+                .get_env_var("heretic_nu_autoload_dirs")
+                .cloned();
+            match ev {
+                Some(Value::List { vals, .. }) => {
+                    for val in vals {
+                        match val {
+                            Value::String { val, .. } => {
+                                let fp = PathBuf::from(val);
+                                if fp.is_dir() {
+                                    for f in std::fs::read_dir(fp)
+                                        .expect("Failed to read autoload-dir contents")
+                                    {
+                                        let f: std::fs::DirEntry =
+                                            f.expect("Failed to read autoload-dir contents");
+                                        let p = f.path();
+                                        if p.is_file()
+                                            && p.extension() == Some(std::ffi::OsStr::new("nu"))
+                                        {
+                                            let mut script = String::new();
+                                            std::fs::File::open(p)
+                                                .expect("File not found.")
+                                                .read_to_string(&mut script).expect("Failed to read autoload-dir file (filesystem IO)");
+                                            self.exec(&script, None)?;
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {
+                                return Err(ShellError::TypeMismatch {
+                                    err_message:
+                                        "$env.heretic_nu_autoload_dirs has to be a list<path>"
+                                            .into(),
+                                    span: Span::unknown(),
+                                });
+                            }
+                        }
+                    }
+                }
+                Some(_) => {
+                    return Err(ShellError::TypeMismatch {
+                        err_message: "$env.heretic_nu_autoload_dirs has to be a list<path>".into(),
+                        span: Span::unknown(),
+                    });
+                }
+                None => {}
+            }
+        }
+        Ok(())
+    }
+
+    pub fn set_exitcode(&mut self, code: i32, span: Span) {
+        self.stack.set_last_exit_code(code, span);
     }
 }

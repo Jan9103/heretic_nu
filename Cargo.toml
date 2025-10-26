@@ -36,6 +36,8 @@ nu-protocol   = {version = "0.108.0", optional = false}
 nu-cmd-lang   = {version = "0.108.0", optional = false}
 nu-engine     = {version = "0.108.0", optional = false}
 nu-parser     = {version = "0.108.0", optional = false}
+nu-path       = {version = "0.108.0", optional = false}
+nu-utils      = {version = "0.108.0", optional = false}
 nuon          = {version = "0.108.0", optional = true}
 nu-cmd-extra  = {version = "0.108.0", optional = true}
 nu-explore    = {version = "0.108.0", optional = true}

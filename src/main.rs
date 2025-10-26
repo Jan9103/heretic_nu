@@ -1,7 +1,6 @@
 use heretic_nu as h;
 
 use nu_protocol::{PipelineData, ShellError, Span, Value};
-use std::io::Read;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::{Arc, Mutex};
@@ -89,6 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(script) = command {
+        nu_instance.load_default_config();
         let res = nu_instance.exec(
             &script,
             Some(PipelineData::ByteStream(
@@ -102,97 +102,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         exit(if was_ok { 0 } else { 1 });
     }
     if let Some(filepath) = exec_file {
-        let mut script = String::new();
-        std::fs::File::open(filepath)
-            .expect("File not found.")
-            .read_to_string(&mut script)?;
-        let res = nu_instance.exec(
-            &script,
+        nu_instance.load_default_config();
+        nu_instance.run_file(
+            String::from(filepath.as_os_str().to_str().unwrap()),
+            &args,
             Some(PipelineData::ByteStream(
                 nu_protocol::ByteStream::stdin(Span::unknown())
                     .expect("something, something, stdin is broken"),
                 None,
             )),
-        );
-        let was_ok = res.is_ok();
-        nu_instance.render(res);
-        exit(if was_ok { 0 } else { 1 });
+        )?;
+        exit(0);
     }
 
-    nu_instance
-        .exec(include_str!("default_config.nu"), None)
-        .expect("Default config is invalid");
-
-    if let Some(home_dir) = std::env::home_dir() {
-        let config_file = home_dir
-            .join(".config")
-            .join("heretic_nu")
-            .join("config.nu");
-        if config_file.is_file() {
-            let mut script = String::new();
-            std::fs::File::open(config_file)
-                .expect("File not found.")
-                .read_to_string(&mut script)?;
-            nu_instance.exec(&script, None)?;
-        }
-        let ev = nu_instance
-            .engine_state
-            .get_env_var("heretic_nu_autoload_dirs")
-            .cloned();
-        match ev {
-            Some(Value::List { vals, .. }) => {
-                for val in vals {
-                    match val {
-                        Value::String { val, .. } => {
-                            let fp = PathBuf::from(val);
-                            if fp.is_dir() {
-                                for f in std::fs::read_dir(fp)
-                                    .expect("Failed to read autoload-dir contents")
-                                {
-                                    let f: std::fs::DirEntry =
-                                        f.expect("Failed to read autoload-dir contents");
-                                    let p = f.path();
-                                    if p.is_file()
-                                        && p.extension() == Some(std::ffi::OsStr::new("nu"))
-                                    {
-                                        let mut script = String::new();
-                                        std::fs::File::open(p)
-                                            .expect("File not found.")
-                                            .read_to_string(&mut script)?;
-                                        nu_instance.exec(&script, None)?;
-                                    }
-                                }
-                            }
-                        }
-                        _ => {
-                            return Err(Box::new(ShellError::TypeMismatch {
-                                err_message: "$env.heretic_nu_autoload_dirs has to be a list<path>"
-                                    .into(),
-                                span: Span::unknown(),
-                            }));
-                        }
-                    }
-                }
-            }
-            Some(_) => {
-                return Err(Box::new(ShellError::TypeMismatch {
-                    err_message: "$env.heretic_nu_autoload_dirs has to be a list<path>".into(),
-                    span: Span::unknown(),
-                }));
-            }
-            None => {}
-        }
-    }
+    nu_instance.load_all_configs()?;
 
     loop {
         match nu_instance.exec("_heretic_nu_prompt", None) {
             Ok(PipelineData::Value(Value::String { val, .. }, _)) => {
                 print!("{}", val);
             }
-            Ok(_) => {
-                eprintln!("Error: invalid _heretic_nu_prompt return type (not a string)");
+            Ok(PipelineData::Value(v, _)) => {
+                eprintln!(
+                    "Error: invalid _heretic_nu_prompt return type (not a string): {}",
+                    v.get_type()
+                );
                 print!("> ");
             }
+            Ok(PipelineData::ListStream(_, _)) => {
+                eprintln!(
+                    "Error: invalid _heretic_nu_prompt return type (PipelineData::ListStream)"
+                );
+                print!("> ");
+            }
+            Ok(PipelineData::ByteStream(_, _)) => {
+                eprintln!(
+                    "Error: invalid _heretic_nu_prompt return type (PipelineData::ByteStream)"
+                );
+                print!("> ");
+            }
+            Ok(PipelineData::Empty) => {}
             Err(e) => {
                 eprintln!("Error in _heretic_nu_prompt: {e}");
                 print!("> ");
@@ -209,7 +158,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 std::process::exit(1);
             }
         };
+        let start_time = std::time::Instant::now();
         let res = nu_instance.exec(&input, None);
+        nu_instance.engine_state.add_env_var(
+            "CMD_DURATION_MS".into(),
+            Value::string(
+                format!("{}", start_time.elapsed().as_millis()),
+                Span::unknown(),
+            ),
+        );
+        let exitcode: (i32, Span) = match res {
+            Ok(_) => (0, Span::unknown()),
+            Err(ShellError::NonZeroExitCode { exit_code, span }) => (exit_code.get(), span),
+            Err(_) => (1, Span::unknown()),
+        };
+        nu_instance.set_exitcode(exitcode.0, exitcode.1);
         nu_instance.render(res);
     }
 }

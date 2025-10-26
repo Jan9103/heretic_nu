@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use nu_protocol::{debugger::Debugger, Span, Value};
 
 use crate::NuInstance;
