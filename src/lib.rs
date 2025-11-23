@@ -82,6 +82,8 @@ impl NuInstance {
             Box::new(commands::debug::HereticDebug),
             #[cfg(feature = "heretic_test")]
             Box::new(commands::run_tests::HereticTestsRun),
+            Box::new(commands::here_span::HereSpanCommand),
+            Box::new(commands::here_span::GetSpanCommand),
             // overrides
             Box::new(commands::version::HereticVersion),
         ])?;

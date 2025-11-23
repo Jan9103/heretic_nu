@@ -21,6 +21,7 @@ Nu, but with zip-ties instead of batteries included.
   * debug mode: `off`
   * launch-arguments: `-x`, `-xx`
   * command: `heretic debug` (switch modes mid-execution)
+  * spans: `heretic span here` to get a span, and `heretic span contents` to view a span
 * different config system:
   1. config file: `~/.config/heretic_nu/config.nu`
   1. each `.nu` file in a directory specified by `$env.heretic_nu_autoload_dirs` (yes you can edit it in your main `config.nu`)
