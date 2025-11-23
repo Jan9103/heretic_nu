@@ -1,4 +1,8 @@
-def _heretic_nu_prompt []: nothing -> string {
+def --env _heretic_nu_prompt []: nothing -> string {
+  for pph in ($env.config?.hooks?.pre_prompt? | default []) {
+    do --env $pph | ignore
+  }
+
   if "PROMPT_COMMAND" in $env {
     do $env.PROMPT_COMMAND
     | $"($in)($env.PROMPT_INDICATOR? | default '')"
@@ -8,10 +12,6 @@ def _heretic_nu_prompt []: nothing -> string {
 }
 
 def --env _heretic_nu_input []: nothing -> string {
-  for pph in ($env.config?.hooks?.pre_prompt? | default []) {
-    do --env $pph | ignore
-  }
-
   let res = do --env {
     print --no-newline "\e[s\e[0J"
     def render [text: string, cursor: int]: nothing -> nothing {
