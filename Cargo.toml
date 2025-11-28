@@ -19,7 +19,7 @@ panic = "unwind"
 # panic = "abort"
 
 [features]
-default = ['nu_std', 'nu_cmd_extra', 'nu_explore', 'heretic_step_debug', 'heretic_const_evil', 'heretic_test']
+default = ['nu_std', 'nu_cmd_extra', 'nu_explore', 'heretic_step_debug', 'heretic_const_evil', 'heretic_test', "nu_stor"]
 
 heretic_step_debug = ['dep:nuon']
 heretic_const_evil = ['dep:nuon']
@@ -28,6 +28,7 @@ heretic_test = []
 nu_std = ['dep:nu-std']
 nu_cmd_extra = ['dep:nu-cmd-extra']
 nu_explore = ['dep:nu-explore']
+nu_stor = ["nu-cli/sqlite", "nu-command/sqlite", "nu-protocol/sqlite"]
 
 [dependencies]
 nu-cli        = {version = "0.108.0", optional = false}
