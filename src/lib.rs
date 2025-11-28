@@ -11,6 +11,17 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+/// this has to be called ONCE to make `stor` work..
+/// and yes apparently everything will share one instnace..
+/// yay..
+#[allow(clippy::result_large_err)]
+#[cfg(feature = "nu_stor")]
+pub fn fix_stor() -> Result<(), ShellError> {
+    let db = nu_command::open_connection_in_memory_custom()?;
+    db.last_insert_rowid();
+    Ok(())
+}
+
 pub struct NuInstance {
     pub engine_state: EngineState,
     pub stack: Stack,

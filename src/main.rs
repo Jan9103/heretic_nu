@@ -21,6 +21,8 @@ Flags:
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     nu_command::tls::CRYPTO_PROVIDER.default();
+    #[cfg(feature = "nu_stor")]
+    h::fix_stor().expect("Failed to initialize nu stor");
 
     let mut nu_instance = h::NuInstance::new()?;
 
