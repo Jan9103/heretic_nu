@@ -357,4 +357,8 @@ impl NuInstance {
     pub fn set_exitcode(&mut self, code: i32, span: Span) {
         self.stack.set_last_exit_code(code, span);
     }
+
+    pub fn set_interactive(&mut self, is_interactive: bool) {
+        self.engine_state.is_interactive = is_interactive;
+    }
 }

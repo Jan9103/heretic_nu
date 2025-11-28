@@ -158,6 +158,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 std::process::exit(1);
             }
         };
+        nu_instance.set_interactive(true);
         let start_time = std::time::Instant::now();
         let res = nu_instance.exec(&input, None);
         nu_instance.engine_state.add_env_var(
@@ -173,6 +174,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(_) => (1, Span::unknown()),
         };
         nu_instance.set_exitcode(exitcode.0, exitcode.1);
+        nu_instance.set_interactive(false);
         nu_instance.render(res);
     }
 }
